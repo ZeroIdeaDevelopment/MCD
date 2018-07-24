@@ -1,0 +1,4 @@
+name: MCD
+description: Minecraft <-> Discord Relay
+version: 1.0
+main: dangoland.mcd.MCD
