@@ -1,15 +1,12 @@
-package dangoland.mcd;
+package zeroidea.mcd;
 
 import net.dv8tion.jda.core.AccountType;
 import net.dv8tion.jda.core.JDA;
 import net.dv8tion.jda.core.JDABuilder;
-import net.dv8tion.jda.core.entities.Webhook;
 import net.dv8tion.jda.core.events.Event;
 import net.dv8tion.jda.core.events.ReadyEvent;
 import net.dv8tion.jda.core.events.message.MessageReceivedEvent;
-import net.dv8tion.jda.core.exceptions.RateLimitedException;
 import net.dv8tion.jda.core.hooks.EventListener;
-import net.dv8tion.jda.core.requests.restaction.MessageAction;
 import net.dv8tion.jda.webhook.WebhookClient;
 import net.dv8tion.jda.webhook.WebhookClientBuilder;
 import net.dv8tion.jda.webhook.WebhookMessage;
@@ -28,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.logging.Logger;
 
+@SuppressWarnings("unused")
 public class MCD extends JavaPlugin implements EventListener, Listener {
     private static FileConfiguration CONFIG;
     private static JDA DISCORD;
@@ -44,7 +42,7 @@ public class MCD extends JavaPlugin implements EventListener, Listener {
 
         // add a config header
         CONFIG.options().header("MCD Configuration\n\n" +
-                "You may read up on configuration options at https://github.com/LewisTehMinerz/MCD/wiki, however\n" +
+                "You may read up on configuration options at https://github.com/ZeroIdeaDevelopment/MCD/wiki, however\n" +
                 "most options should be self-explanitory.");
 
         CONFIG.options().copyHeader(true);
@@ -53,10 +51,16 @@ public class MCD extends JavaPlugin implements EventListener, Listener {
         CONFIG.addDefault("submit-metrics", true);
         CONFIG.addDefault("bot-token", "BOT-TOKEN-HERE");
         CONFIG.addDefault("relay-channel", 999999999999999999L);
+
+        // webhook options
         CONFIG.addDefault("webhooks.enabled", false);
         CONFIG.addDefault("webhooks.url", "");
+        CONFIG.addDefault("webhooks.username", "%s");
+
+        // formatting options
         CONFIG.addDefault("format.minecraft", "\\u00A7l%s\\u00A7r: %s");
-        CONFIG.addDefault("format.discord", "**%s**: %s");
+        CONFIG.addDefault("format.discord.bot", "**%s**: %s");
+        CONFIG.addDefault("format.discord.webhook", "%s");
 
         CONFIG.options().copyDefaults(true);
 
@@ -91,7 +95,9 @@ public class MCD extends JavaPlugin implements EventListener, Listener {
 
     @Override
     public void onDisable() {
-        DISCORD.shutdown();
+        if (DISCORD != null) {
+            DISCORD.shutdown();
+        }
     }
 
     public void onEvent(Event e) {
@@ -124,7 +130,7 @@ public class MCD extends JavaPlugin implements EventListener, Listener {
         if (!e.isCancelled()) { // prevent relaying messages that aren't actually meant to be sent
             if (!CONFIG.getBoolean("webhooks.enabled")) {
                 DISCORD.getTextChannelById(CONFIG.getLong("relay-channel")).sendMessage(String.format(
-                        CONFIG.getString("format.discord"),
+                        CONFIG.getString("format.discord.bot"),
                         e.getPlayer().getName(),
                         e.getMessage())).queue();
             } else {
@@ -132,10 +138,12 @@ public class MCD extends JavaPlugin implements EventListener, Listener {
                         .setDaemon(true)
                         .build();
                 WebhookMessage msg = new WebhookMessageBuilder()
-                        .setContent(e.getMessage())
+                        .setContent(String.format(CONFIG.getString("format.discord.webhook"),
+                                e.getMessage()))
                         .setAvatarUrl("https://crafatar.com/renders/head/" + e.getPlayer().getUniqueId()
                                 + "?overlay&default=MHF_Steve")
-                        .setUsername(e.getPlayer().getName())
+                        .setUsername(String.format(CONFIG.getString("webhook.username"),
+                                e.getPlayer().getName()))
                         .build();
                 hook.send(msg);
                 hook.close();
